@@ -1,0 +1,152 @@
+@inject Blazorcrud.Client.Shared.PageHistoryState PageHistoryState
+@inject Services.IUserService UserService
+
+<EditForm Model="@project" OnValidSubmit="@OnValidSubmit">
+    <FluentValidator TValidator="ProjectValidator" />
+    <div class="form-group">
+        <label>Name :</label>
+        <div>
+            <InputText @bind-Value="@project.Name" class="form-control col-sm-6" />
+            <ValidationMessage For="@(() => project.Name)" />
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Description :</label>
+        <div>
+            <InputText @bind-Value="@project.Description" class="form-control col-sm-12" />
+            <ValidationMessage For="@(() => project.Description)" />
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Created Date :</label>
+        <div>
+            <InputDate @bind-Value="@project.CreatedAt" class="form-control col-sm-6" />
+            <ValidationMessage For="@(() => project.CreatedAt)" />
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Assignee :</label>
+        <div>
+            <InputSelect @bind-Value="@project.Assignee.Id"  class="form-control col-sm-6">
+                <option disabled value="">Select an assignee </option>
+                @if (users!=null)
+                {
+                    @foreach (var user in users.Results)
+                    {
+                        <option value="@user.Id" @onselect="@(()=>project.Assignee=user)">@user.FirstName @user.LastName</option>
+                    }
+                }
+            </InputSelect>
+            <ValidationMessage For="@(() => project.Assignee)" />
+        </div>
+    </div>
+    <h3>Time Track</h3>
+    <div class="form-row">
+        <div class="form-group col-md-3">
+            <label>Date</label>
+        </div>
+        <div class="form-group col-md-3">
+            <label>Hour</label>
+        </div>
+        <div class="form-group col-md-3">
+            <label>Receipt</label>
+        </div>
+    </div>
+    
+    @if (project.Tracks != null)
+    {
+        <ValidationMessage For="@(() => project.Tracks)" />
+        @foreach (var working in project.Tracks)
+        {
+            <div class="form-row">
+                <div class="form-group col-md-3">
+                    <InputDate id="Date" class="form-control" placeholder="Date" @bind-Value="working.Date" />
+                    <ValidationMessage For="@(() => working.Date)" />
+                </div>
+                <div class="form-group col-md-3">
+                    <InputNumber id="Hours" class="form-control" placeholder="Hours" @bind-Value="working.Hours" />
+                    <ValidationMessage For="@(() => working.Hours)" />
+                </div>
+                <div class="form-group col-md-3">
+                    <InputFile id="Receipt" class="form-control" placeholder="Receipt" @bind-Value="working.Receipt" />
+                    <ValidationMessage For="@(() => working.Receipt)" />
+                </div>
+                <div class="Form-group">
+                    <a href="javascript:void(0)" class="btn btn-danger" @onclick="@(()=>OnWorkingDelete(project, working))">X</a>
+                </div>
+            </div>
+        }
+    }
+    
+    <div class="form-group">
+        <a href="javascript:void(0)" class="btn btn-success" disabled @onclick="@(()=>OnWorkingAdd(project))">Add Working</a>
+    </div>
+    <hr />
+    <div class="form-group">
+        <button disabled="@loading" class="btn btn-primary">
+            @if (loading) 
+            {
+                <span class="spinner-border spinner-border-sm mr-1"></span>
+            }
+            @ButtonText
+        </button>
+        @if (PageHistoryState.CanGoBack()){
+            <NavLink href="@PageHistoryState.GetGoBackPage()" class="btn btn-link">Cancel</NavLink>
+        }
+        else{
+            <NavLink href="/project/1" class="btn btn-link">Back</NavLink>
+        }
+    </div>
+
+</EditForm>
+
+@code {
+    [Parameter]
+    public Project project { get; set; } 
+    [Parameter]
+    public string ButtonText { get; set; } = "Save";
+    [Parameter]
+    public bool loading {get; set;} = false;
+    [Parameter]
+    public EventCallback OnValidSubmit { get; set; }
+    protected PagedResult<User>  users = new PagedResult<User>();
+
+
+    protected override void OnInitialized()
+    {
+       project = new Project
+            {
+                Assignee = new User(),
+                CreatedAt = new DateTime()
+            };
+
+        base.OnInitialized();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        users = await UserService.GetUsers(null, null);
+    }
+    public void OnWorkingDelete(Project project, Track working)
+    {
+        project.Workings.Remove(working);
+    }
+
+    public void OnWorkingAdd(Project project)
+    {
+        if (project.Workings == null)
+        {
+            project.Workings = new List<Track>();
+        }
+        project.Workings.Add(new Track { Date = new DateTime(), Hours = 0 });
+    }
+    void SelectAssignee(ChangeEventArgs args)
+    {
+        foreach(var user in users.Results)
+        {
+            if ((int)args.Value==user.Id){
+                project.Assignee = user;
+            }
+        }
+    }
+}

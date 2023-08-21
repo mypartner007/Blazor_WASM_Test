@@ -1,0 +1,52 @@
+@page "/project/updateproject/{id}"
+@attribute [Authorize]
+@inject IAlertService AlertService
+@inject IProjectService ProjectService
+@inject NavigationManager navManager
+@inject Blazorcrud.Client.Shared.PageHistoryState PageHistoryState
+
+<h1>Edit Project</h1>
+<br/>
+
+<Form ButtonText="Update Project" project="@project" loading="@loading"
+            OnValidSubmit="@UpdateProject" />
+
+@code {
+    bool loading = false;
+    
+    [Parameter]
+    public string Id { get; set; }
+
+    Project project = new Project
+    {
+         Name = "",
+         Description = "",
+    };
+    
+    protected async override Task OnParametersSetAsync()
+    {
+       project = await ProjectService.GetProject(int.Parse(Id));
+    }
+
+    async Task UpdateProject()
+    {
+        loading = true;
+        try
+        {
+            await ProjectService.UpdateProject(project);
+            AlertService.Success("Project updated successfully", keepAfterRouteChange: true);
+            if (PageHistoryState.CanGoBack()){
+                navManager.NavigateTo(PageHistoryState.GetGoBackPage());
+            }
+            else{
+                navManager.NavigateTo("/project/1");
+            } 
+        }
+        catch (Exception ex)
+        {
+            AlertService.Error(ex.Message);
+            loading = false;
+            StateHasChanged();
+        }
+    }
+}

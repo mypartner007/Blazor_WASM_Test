@@ -1,0 +1,43 @@
+@page "/project/createproject"
+@inject IAlertService AlertService
+@inject IProjectService ProjectService
+@inject NavigationManager navManager
+@inject Blazorcrud.Client.Shared.PageHistoryState PageHistoryState
+
+<h1>Create Project</h1>
+<br/>
+
+<Form ButtonText="Create Project" project="@project" loading="@loading"
+            OnValidSubmit="@CreateProject" />
+
+@code {
+    bool loading = false;
+    
+    Project project = new Project
+    {
+        Name = "",
+        Description = "",
+        CreatedAt = new DateTime(),
+    };
+    async Task CreateProject()
+    {
+        loading = true;
+        try
+        {
+            await ProjectService.AddProject(project);
+            AlertService.Success("Project added successfully", keepAfterRouteChange: true);
+            if (PageHistoryState.CanGoBack()){
+                navManager.NavigateTo(PageHistoryState.GetGoBackPage());
+            }
+            else{
+                navManager.NavigateTo("/project/1");
+            } 
+        }
+        catch (Exception ex)
+        {
+            AlertService.Error(ex.Message);
+            loading = false;
+            StateHasChanged();
+        }
+    }
+}
