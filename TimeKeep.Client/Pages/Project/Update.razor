@@ -1,0 +1,67 @@
+@page "/project/updateproject/{id}"
+@attribute [Authorize]
+@inject IAlertService AlertService
+@inject IProjectService ProjectService
+@inject NavigationManager navManager
+@inject TimeKeep.Client.Shared.PageHistoryState PageHistoryState
+
+<h1>Edit Project</h1>
+<br/>
+
+<Form ButtonText="Update Project" project="@project" loading="@loading" 
+            OnValidSubmit="@UpdateProject" />
+
+@code {
+    bool loading = false;
+
+    [Parameter]
+    public string Id { get; set; }
+
+    Project project = new Project
+    {
+         Name = "",
+         Description = "",
+         Assignee = new User{} ,
+         Tracks = new List<Track> { }
+
+    };
+
+    protected async override Task OnParametersSetAsync()
+    {
+        project = await ProjectService.GetProject(int.Parse(Id));
+        if (project.Assignee == null)
+        {
+            project.Assignee = new User();
+        }
+        if (project.Tracks == null)
+        {
+            project.Tracks = new List<Track> { };
+        }
+    }
+
+    async Task UpdateProject()
+    {
+        loading = true;
+        try
+        {
+            if (project.Assignee.Id == 0)
+            {
+                project.Assignee = null;
+            }
+            await ProjectService.UpdateProject(project);
+            AlertService.Success("Project updated successfully", keepAfterRouteChange: true);
+            if (PageHistoryState.CanGoBack()){
+                navManager.NavigateTo(PageHistoryState.GetGoBackPage());
+            }
+            else{
+                navManager.NavigateTo("/project/1");
+            } 
+        }
+        catch (Exception ex)
+        {
+            AlertService.Error(ex.Message);
+            loading = false;
+            StateHasChanged();
+        }
+    }
+}

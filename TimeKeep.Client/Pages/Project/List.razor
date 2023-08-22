@@ -1,0 +1,130 @@
+@page "/project/{Page}"
+@inject Services.IProjectService ProjectService
+@inject Services.IUserService UserService
+@inject Microsoft.AspNetCore.Components.NavigationManager UriHelper
+@inject TimeKeep.Client.Shared.PageHistoryState PageHistoryState
+
+<h1>Projects</h1>
+<br/>
+
+<div class="row mb-3">
+    <div class="col-md-7">
+        @if(IsAdmin)
+        { 
+            <NavLink href="/project/createproject" class="btn btn-sm btn-success mb-2">Add Project</NavLink>
+        }
+    </div>
+</div>
+
+@if (projects == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th style="width:25%">Name</th>
+                <th style="width:35%">Description</th>
+                <th style="width:25%">Created Date</th>
+                <th style="width:20%">Assignee</th>
+                <th style="width:5%"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var project in projects.Results)
+            {
+                <tr>
+                    <td>@project.Name</td>
+                    <td>@project.Description</td>
+                    <td>@project.CreatedAt</td>
+                    @if (project.Assignee != null)
+                    {
+                        <td> @project.Assignee.FirstName @project.Assignee.LastName</td>
+                    }
+                    else
+                    {
+                        <td>Not Yet</td>
+                    }
+                    <td style="white-space: nowrap">
+                        <NavLink href="@($"/project/viewproject/{project.Id}")" class="oi oi-eye text-primary mr-3 nounderline"></NavLink>
+                        @if (Editable(project))
+                            {
+                            <NavLink href="@($"/project/updateproject/{project.Id}")" class="oi oi-pencil text-warning mr-2 nounderline"></NavLink>
+                            @if (IsAdmin)
+                            {
+                                <button @onclick="@(() => DeleteProject(project))" class=" btn btn-link oi oi-trash text-danger mr-1 nounderline">
+                                </button>
+                            }
+                        }
+                    </td>
+                </tr>
+            }
+
+        </tbody>
+    </table>
+    <Pager Result=@projects PageChanged=PagerPageChanged />
+}
+
+@code {
+        [Parameter]
+        public string Page { get; set;} = "1";
+        [Parameter]
+        public string SearchTerm { get; set; } = string.Empty;
+    protected PagedResult<Project> projects;
+    public bool LoggedIn
+    {
+        get { return UserService.User != null; }
+    }
+    public bool Editable (Project project)
+    {
+        if (IsAdmin)
+        {
+            return true;
+        }
+        return UserService.User != null && UserService.User.Id == project.AssigneeId;
+    }
+    public bool IsAdmin
+    {
+        get
+        {
+            if(UserService.User!=null)
+            {
+                return UserService.User.IsAdmin;
+            }
+            else
+            {
+                return false;
+            }
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        PageHistoryState.AddPageToHistory(UriHelper.Uri);
+        base.OnInitialized();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (UserService.User != null){
+            projects = await ProjectService.GetProjects(IsAdmin ? null : UserService.User.Id, Page);
+            PageHistoryState.AddPageToHistory(UriHelper.Uri);
+        }
+  }
+
+    protected void PagerPageChanged(int page)
+    {
+        UriHelper.NavigateTo("/project/" + page);
+        PageHistoryState.AddPageToHistory(UriHelper.Uri);
+    }
+
+    private async void DeleteProject(Project _project)
+    {
+        var project = _project;
+        await ProjectService.DeleteProject(project.Id);
+        projects = await ProjectService.GetProjects(null, Page);
+        StateHasChanged();
+    }
+}

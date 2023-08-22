@@ -1,0 +1,85 @@
+@page "/user/register"
+@inject Services.IUserService UserService
+@inject IAlertService AlertService
+@inject NavigationManager navManager
+@inject TimeKeep.Client.Shared.PageHistoryState PageHistoryState
+
+<div class="col-md-6 offset-md-3 mt-5">
+    <div class="card">
+        <h4 class="card-header">Register</h4>
+        <div class="card-body">
+            <EditForm Model="@registerModel" OnValidSubmit="OnValidSubmit">
+                <DataAnnotationsValidator />
+                <div class="form-group">
+                    <label>Username</label>
+                    <InputText @bind-Value="registerModel.Username" id="Username" class="form-control" />
+                    <ValidationMessage For="@(() => registerModel.Username)" />
+                </div>
+                <div class="form-group">
+                    <label>First Name</label>
+                    <InputText @bind-Value="registerModel.FirstName" id="FirstName" class="form-control" />
+                    <ValidationMessage For="@(() => registerModel.Username)" />
+                </div>
+                <div class="form-group">
+                    <label>Last Name</label>
+                    <InputText @bind-Value="registerModel.LastName" id="LastName" class="form-control" />
+                    <ValidationMessage For="@(() => registerModel.Username)" />
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <InputText @bind-Value="registerModel.Password" type="password" id="Password" class="form-control" />
+                    <ValidationMessage For="@(() => registerModel.Password)" />
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <InputText @bind-Value="registerModel.ConfirmPassword" type="password" id="ConfirmPassword" class="form-control" />
+                    <ValidationMessage For="@(() => registerModel.ConfirmPassword)" />
+                </div>
+                <button disabled="@loading" class="btn btn-primary" id="login_button">
+                    @if (loading) 
+                    {
+                        <span class="spinner-border spinner-border-sm mr-1"></span>
+                    }
+                    Register
+                </button>
+                <NavLink href="/user/login" class="nav-item nav-link">Login</NavLink>
+
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private TimeKeep.Client.Shared.Register registerModel = new TimeKeep.Client.Shared.Register();
+    private bool loading;
+
+    private async void OnValidSubmit()
+    {
+        // reset alerts on submit
+        AlertService.Clear();
+
+        if (registerModel.Password != registerModel.ConfirmPassword)
+        {
+            AlertService.Error("Password is not match");
+
+        }
+        else
+        {
+            loading = true;
+
+            try
+            {
+                await UserService.Register(registerModel);
+                navManager.NavigateTo("/user/login");
+
+            }
+            catch (Exception ex)
+            {
+                AlertService.Error(ex.Message);
+                loading = false;
+                StateHasChanged();
+            }
+
+        }
+    }
+}
